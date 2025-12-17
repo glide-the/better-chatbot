@@ -7,6 +7,7 @@ import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
+  TextUIPart,
   UIMessage,
 } from "ai";
 import {
@@ -15,10 +16,12 @@ import {
   ChatModel,
 } from "app-types/chat";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { generateUUID } from "lib/utils";
+import { mutate } from "swr";
+import { toast } from "sonner";
+import { useGenerateThreadTitle } from "@/hooks/queries/use-generate-thread-title";
+import { generateUUID, truncateString } from "lib/utils";
 import { useShallow } from "zustand/shallow";
 import { ErrorMessage, PreviewMessage } from "./message";
-import { toast } from "sonner";
 
 type Props = {
   threadId: string;
@@ -35,6 +38,7 @@ export function EvalTaskChatBot({ threadId, initialMessages }: Props) {
     toolChoice,
     allowedAppDefaultToolkit,
     allowedMcpServers,
+    threadList,
     threadMentions,
     threadImageToolModel,
   ] = appStore(
@@ -44,10 +48,15 @@ export function EvalTaskChatBot({ threadId, initialMessages }: Props) {
       state.toolChoice,
       state.allowedAppDefaultToolkit,
       state.allowedMcpServers,
+      state.threadList,
       state.threadMentions,
       state.threadImageToolModel,
     ]),
   );
+
+  const generateTitle = useGenerateThreadTitle({
+    threadId,
+  });
 
   const mentions = threadMentions[threadId] ?? [];
 
@@ -58,7 +67,39 @@ export function EvalTaskChatBot({ threadId, initialMessages }: Props) {
     allowedMcpServers,
     mentions,
     threadImageToolModel,
+    threadList,
+    messages: initialMessages,
   });
+
+  const onFinish = useCallback(() => {
+    const messages = latestRef.current.messages;
+    const prevThread = latestRef.current.threadList.find(
+      (v) => v.id === threadId,
+    );
+
+    const isNewThread =
+      !prevThread?.title &&
+      messages.filter((v) => v.role === "user" || v.role === "assistant")
+        .length < 3;
+
+    if (isNewThread) {
+      const part = messages
+        .slice(0, 2)
+        .flatMap((m) =>
+          m.parts
+            .filter((v) => v.type === "text")
+            .map(
+              (p) =>
+                `${m.role}: ${truncateString((p as TextUIPart).text, 500)}`,
+            ),
+        );
+      if (part.length > 0) {
+        generateTitle(part.join("\n\n"));
+      }
+    } else if (latestRef.current.threadList[0]?.id !== threadId) {
+      mutate("/api/thread");
+    }
+  }, [threadId, generateTitle, latestRef]);
 
   const {
     messages,
@@ -77,9 +118,14 @@ export function EvalTaskChatBot({ threadId, initialMessages }: Props) {
     streamMode: "text",
     sendExtraMessageFields: true,
     generateId: generateUUID,
+    onFinish,
     transport: new DefaultChatTransport({
       api: "/api/eval/task_chat",
       prepareSendMessagesRequest: ({ messages, body, id }) => {
+        if (window.location.pathname !== `/eval-task/${threadId}`) {
+          window.history.replaceState({}, "", `/eval-task/${threadId}`);
+        }
+
         const lastMessage = messages.at(-1)!;
         const attachments: ChatAttachment[] = lastMessage.parts.reduce(
           (acc: ChatAttachment[], part: any) => {
@@ -141,6 +187,11 @@ export function EvalTaskChatBot({ threadId, initialMessages }: Props) {
       setMessages((prev) => prev.slice(0, -1));
     },
   });
+
+  useEffect(() => {
+    latestRef.current.messages = messages;
+    latestRef.current.threadList = threadList;
+  }, [messages, threadList, latestRef]);
 
   const addToolResult = useCallback(
     async (result: Parameters<typeof _addToolResult>[0]) => {
