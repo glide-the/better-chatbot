@@ -32,8 +32,14 @@ export async function GET(request: Request) {
     return new Response(text, { status: res.status });
   }
 
+  const headers = new Headers(res.headers);
+
+  // 确保 Content-Disposition header 使用正确的文件名
+  const contentDisposition = `attachment; filename="${encodeURIComponent(resultSourceName)}"`;
+  headers.set("Content-Disposition", contentDisposition);
+
   return new Response(res.body, {
     status: res.status,
-    headers: new Headers(res.headers),
+    headers,
   });
 }

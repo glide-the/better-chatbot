@@ -30,7 +30,39 @@ export const TaskInvocation = memo(function TaskInvocation({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const hasPreviewOpen = Boolean(previewKey);
+
+  const handleDownload = async (filename: string) => {
+    if (!taskId) return;
+
+    try {
+      setDownloading(true);
+      const url = `/api/research-task/download?task_id=${encodeURIComponent(
+        taskId,
+      )}&result_source_name=${encodeURIComponent(filename)}`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`下载失败：${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error("下载失败:", err);
+      alert(err instanceof Error ? err.message : "下载失败");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!hasPreviewOpen || !taskId || !previewKey) return;
@@ -154,7 +186,7 @@ export const TaskInvocation = memo(function TaskInvocation({
           }
         }}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="!w-auto !max-w-[90vw]">
           <DialogHeader>
             <DialogTitle>
               任务结果预览{previewKey ? ` · ${previewKey}` : ""}
@@ -207,19 +239,12 @@ export const TaskInvocation = memo(function TaskInvocation({
               <Button
                 size="sm"
                 variant="outline"
-                asChild
+                onClick={() => handleDownload(previewKey)}
+                disabled={downloading}
                 className="text-[11px]"
               >
-                <a
-                  href={`/api/research-task/download?task_id=${encodeURIComponent(
-                    taskId,
-                  )}&result_source_name=${encodeURIComponent(previewKey)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <FileDown className="size-3 mr-1" />
-                  下载原文件
-                </a>
+                <FileDown className="size-3 mr-1" />
+                {downloading ? "下载中..." : "下载原文件"}
               </Button>
             </div>
           )}
