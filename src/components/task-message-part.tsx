@@ -2,8 +2,10 @@
 
 import { memo, useState } from "react";
 import { ToolUIPart, getToolName, UIMessage } from "ai";
-import type { UseChatHelpers } from "@ai-sdk/react";
-import { VercelAITaskToolStreamingResultTag } from "app-types/task";
+import {
+  VercelAITaskToolStreamingResultTag,
+  VercelAITaskToolStreamingResult,
+} from "app-types/task";
 import { TaskInvocation } from "./tool-invocation/task-invocation";
 import { ActivityPanel } from "./activity-panel";
 
@@ -27,13 +29,13 @@ export const TaskMessagePart = memo(function TaskMessagePart({
   return (
     <div className="group w-full">
       <TaskInvocation
-        result={result}
+        result={part.output as VercelAITaskToolStreamingResult}
         onClick={() => setTaskActivityPanelOpen(true)}
       />
       <ActivityPanel
         isOpen={taskActivityPanelOpen}
         onClose={() => setTaskActivityPanelOpen(false)}
-        result={result}
+        result={part.output as VercelAITaskToolStreamingResult}
       />
     </div>
   );

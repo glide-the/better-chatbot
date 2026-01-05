@@ -201,7 +201,11 @@ export const ActivityPanel = memo(function ActivityPanel({
 
   const fetchActivityLogs = async (id: string) => {
     try {
-      setIsLoadingLogs(true);
+      // 乐观更新：不设置加载状态，保留旧数据显示
+      // 只在首次加载（activities 为空）时显示加载状态
+      if (activities.length === 0) {
+        setIsLoadingLogs(true);
+      }
 
       const resultRes = await fetch(
         `/api/research-task/result?task_id=${encodeURIComponent(id)}`,
