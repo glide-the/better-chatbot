@@ -690,6 +690,27 @@ export function ChatMentionInputSuggestion({
                     </div>
                   </div>
                 )}
+                {groupedMentions.task.items.length > 0 && (
+                  <div className="p-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                      {groupedMentions.task.title}
+                    </div>
+                    <div className="space-y-1">
+                      {groupedMentions.task.items.map((item) => (
+                        <MentionItem
+                          key={item.id}
+                          item={item}
+                          isSelected={
+                            allMentions[selectedIndex]?.id === item.id
+                          }
+                          ref={(el) => {
+                            itemRefs.current[item.id] = el;
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {groupedMentions.defaultTool.items.length > 0 && (
                   <div className="p-2 border-t">
                     <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
@@ -784,6 +805,31 @@ export function ChatMentionInputSuggestion({
                       ) : (
                         <div className="px-2 py-3 text-xs text-muted-foreground text-center">
                           No workflows found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                      {groupedMentions.task.title}
+                    </div>
+                    <div className="space-y-1">
+                      {groupedMentions.task.items.length > 0 ? (
+                        groupedMentions.task.items.map((item) => (
+                          <MentionItem
+                            key={item.id}
+                            item={item}
+                            isSelected={
+                              allMentions[selectedIndex]?.id === item.id
+                            }
+                            ref={(el) => {
+                              itemRefs.current[item.id] = el;
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                          No tasks found
                         </div>
                       )}
                     </div>
