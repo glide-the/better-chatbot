@@ -7,6 +7,7 @@ import {
   ArrowUpRightIcon,
   AtSign,
   ChartColumn,
+  Check,
   ChevronRight,
   CodeIcon,
   GlobeIcon,
@@ -89,6 +90,7 @@ interface ToolSelectDropdownProps {
   mentions?: ChatMention[];
   onSelectWorkflow?: (workflow: WorkflowSummary) => void;
   onSelectAgent?: (agent: AgentSummary) => void;
+  onToggleTask?: (mention: ChatMention) => void;
   onGenerateImage?: (provider?: "google" | "openai") => void;
   className?: string;
 }
@@ -108,6 +110,7 @@ export function ToolSelectDropdown({
   side,
   onSelectWorkflow,
   onSelectAgent,
+  onToggleTask,
   onGenerateImage,
   mentions,
   className,
@@ -251,6 +254,10 @@ export function ToolSelectDropdown({
           <DropdownMenuSeparator />
         </div>
         <AgentSelector onSelectAgent={onSelectAgent} />
+        <div className="py-1">
+          <DropdownMenuSeparator />
+        </div>
+        <TaskSelector mentions={mentions} onToggleTask={onToggleTask} />
         <div className="py-1">
           <DropdownMenuSeparator />
         </div>
@@ -441,6 +448,60 @@ function ToolPresets() {
           </DropdownMenuSubContent>
         </DropdownMenuPortal>
       </DropdownMenuSub>
+    </DropdownMenuGroup>
+  );
+}
+
+function TaskSelector({
+  mentions,
+  onToggleTask,
+}: {
+  mentions?: ChatMention[];
+  onToggleTask?: (mention: ChatMention) => void;
+}) {
+  const taskOptions = [
+    {
+      name: "research_agent_task",
+      label: "Research Agent 任务",
+      description: "提交并跟踪 Research Agent 调研任务",
+    },
+  ];
+
+  const selectedTaskNames = new Set(
+    (mentions ?? [])
+      .filter((mention) => mention.type === "task")
+      .map((mention) => mention.name),
+  );
+
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Tasks</DropdownMenuLabel>
+      {taskOptions.map((task) => {
+        const isSelected = selectedTaskNames.has(task.name);
+        const mention: ChatMention = {
+          type: "task",
+          name: task.name,
+          description: task.description,
+        };
+
+        return (
+          <DropdownMenuItem
+            key={task.name}
+            onSelect={() => onToggleTask?.(mention)}
+            className="flex items-center gap-2"
+          >
+            <div className="size-4 flex items-center justify-center">
+              {isSelected && <Check className="size-3" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm">{task.label}</span>
+              <span className="text-xs text-muted-foreground">
+                {task.description}
+              </span>
+            </div>
+          </DropdownMenuItem>
+        );
+      })}
     </DropdownMenuGroup>
   );
 }

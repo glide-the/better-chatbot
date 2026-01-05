@@ -321,6 +321,31 @@ export default function PromptInput({
     [addMention],
   );
 
+  const onToggleTask = useCallback(
+    (mention: ChatMention) => {
+      if (!threadId) return;
+      appStoreMutate((prev) => {
+        const currentMentions = prev.threadMentions[threadId] ?? [];
+        const exists = currentMentions.some(
+          (m) => m.type === "task" && m.name === mention.name,
+        );
+        const nextMentions = exists
+          ? currentMentions.filter(
+              (m) => !(m.type === "task" && m.name === mention.name),
+            )
+          : [...currentMentions, mention];
+
+        return {
+          threadMentions: {
+            ...prev.threadMentions,
+            [threadId]: nextMentions,
+          },
+        };
+      });
+    },
+    [threadId],
+  );
+
   const submit = () => {
     if (isLoading) return;
     if (uploadedFiles.some((file) => file.isUploading)) {
@@ -575,6 +600,7 @@ export default function PromptInput({
                         side="top"
                         onSelectWorkflow={onSelectWorkflow}
                         onSelectAgent={onSelectAgent}
+                        onToggleTask={onToggleTask}
                         onGenerateImage={handleGenerateImage}
                         mentions={mentions}
                       />
