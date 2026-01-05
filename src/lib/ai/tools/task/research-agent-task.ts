@@ -159,15 +159,21 @@ export function taskToVercelAITool(
           const nextJson = await res.json();
           const data = nextJson.data;
           const finished = Boolean(data.finished);
-          const success = finished && data.info === "completed";
+          // 只有在 finished 为 true 且 info 不是 pending 时才算真正完成
+          const isActuallyFinished = finished && data.info !== "pending";
+          const success = isActuallyFinished && data.info === "completed";
 
           lastResult = {
             ...lastResult,
             taskId: data.task_id,
             endedAt: Date.now(),
-            status: finished ? (success ? "completed" : "fail") : "running",
+            status: isActuallyFinished
+              ? success
+                ? "completed"
+                : "fail"
+              : "running",
             info: data.info,
-            finished,
+            finished: isActuallyFinished,
             result: data.result ?? lastResult.result,
           };
 
@@ -177,7 +183,7 @@ export function taskToVercelAITool(
             output: lastResult,
           });
 
-          if (finished) break;
+          if (isActuallyFinished) break;
         }
 
         return lastResult;
