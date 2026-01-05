@@ -36,11 +36,13 @@ import {
   VercelAIWorkflowToolStreamingResultTag,
   VercelAIWorkflowToolTag,
 } from "app-types/workflow";
+import { VercelAITaskToolStreamingResultTag } from "app-types/task";
 import { createWorkflowExecutor } from "lib/ai/workflow/executor/workflow-executor";
 import { NodeKind } from "lib/ai/workflow/workflow.interface";
 import { mcpClientsManager } from "lib/ai/mcp/mcp-manager";
 import { APP_DEFAULT_TOOL_KIT } from "lib/ai/tools/tool-kit";
 import { AppDefaultToolkit } from "lib/ai/tools";
+import { buildTaskDefaultTools } from "lib/ai/tools/task";
 
 export function filterMCPToolsByMentions(
   tools: Record<string, VercelAIMcpTool>,
@@ -425,6 +427,26 @@ export const loadWorkFlowTools = (opt: {
     .map((tools) => workflowToVercelAITools(tools, opt.dataStream))
     .orElse({} as Record<string, VercelAIWorkflowTool>);
 
+export const loadTaskTools = (opt: {
+  mentions?: ChatMention[];
+  dataStream: UIMessageStreamWriter;
+  userId: string;
+}) =>
+  safe(() => {
+    const tools = buildTaskDefaultTools(opt.dataStream, opt.userId);
+    if (opt.mentions?.length) {
+      const taskMentions = opt.mentions.filter((m) => m.type === "task");
+      if (taskMentions.length) {
+        return Object.fromEntries(
+          Object.entries(tools).filter(([name]) =>
+            taskMentions.some((m) => m.name === name),
+          ),
+        );
+      }
+    }
+    return tools;
+  }).orElse({} as Record<string, Tool>);
+
 export const loadAppDefaultTools = (opt?: {
   mentions?: ChatMention[];
   allowedAppDefaultToolkit?: string[];
@@ -479,6 +501,14 @@ export const convertToSavePart = <T extends UIMessagePart<any, any>>(
                   result: undefined,
                 };
               }),
+            },
+          };
+        }
+        if (VercelAITaskToolStreamingResultTag.isMaybe(v.output)) {
+          return {
+            ...v,
+            output: {
+              ...v.output,
             },
           };
         }

@@ -153,7 +153,7 @@ export function ChatMentionInputSuggestion({
   onOpenChange?: (open: boolean) => void;
   children?: React.ReactNode;
   style?: React.CSSProperties;
-  disabledType?: ("mcp" | "workflow" | "defaultTool" | "agent")[];
+  disabledType?: ("mcp" | "workflow" | "defaultTool" | "agent" | "task")[];
 }) {
   const t = useTranslations("Common");
   const [mcpList, workflowList, agentList] = appStore(
@@ -343,6 +343,47 @@ export function ChatMentionInputSuggestion({
       });
   }, [workflowList, selectedIds, disabledType, searchValue]);
 
+  const taskMentions = useMemo(() => {
+    if (disabledType?.includes("task")) return [];
+
+    const tasks = [
+      {
+        name: "research_agent_task",
+        label: "Research Agent 任务",
+        description: "提交并跟踪 Research Agent 调研任务",
+      },
+    ];
+
+    return tasks
+      .filter(
+        (task) =>
+          !searchValue ||
+          task.label.toLowerCase().includes(searchValue.toLowerCase()) ||
+          task.name.toLowerCase().includes(searchValue.toLowerCase()),
+      )
+      .map((task) => {
+        const id = JSON.stringify({
+          type: "task",
+          name: task.name,
+          description: task.description,
+        });
+        return {
+          id: task.name,
+          type: "task",
+          label: task.label,
+          onSelect: () =>
+            onSelectMention({
+              label: `task("${task.label}")`,
+              id,
+            }),
+          icon: <HammerIcon className="size-3.5 text-foreground" />,
+          suffix: selectedIds?.includes(id) && (
+            <CheckIcon className="size-3 ml-auto" />
+          ),
+        };
+      });
+  }, [selectedIds, disabledType, searchValue]);
+
   const defaultToolMentions = useMemo(() => {
     if (disabledType?.includes("defaultTool")) return [];
     const items = Object.values(DefaultToolName).map((toolName) => {
@@ -443,10 +484,17 @@ export function ChatMentionInputSuggestion({
     return [
       ...agentMentions,
       ...workflowMentions,
+      ...taskMentions,
       ...defaultToolMentions,
       ...mcpMentions,
     ];
-  }, [agentMentions, workflowMentions, defaultToolMentions, mcpMentions]);
+  }, [
+    agentMentions,
+    workflowMentions,
+    taskMentions,
+    defaultToolMentions,
+    mcpMentions,
+  ]);
 
   // Reset selected index when mentions change
   useEffect(() => {
@@ -469,6 +517,7 @@ export function ChatMentionInputSuggestion({
     const groups = {
       agent: { title: "Agents", items: [] as MentionItemType[] },
       workflow: { title: "Workflows", items: [] as MentionItemType[] },
+      task: { title: "Tasks", items: [] as MentionItemType[] },
       defaultTool: { title: "App Tools", items: [] as MentionItemType[] },
       mcp: { title: "MCP Tools", items: [] as MentionItemType[] },
       mcpTool: { title: "MCP Tools", items: [] as MentionItemType[] },
@@ -641,6 +690,27 @@ export function ChatMentionInputSuggestion({
                     </div>
                   </div>
                 )}
+                {groupedMentions.task.items.length > 0 && (
+                  <div className="p-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                      {groupedMentions.task.title}
+                    </div>
+                    <div className="space-y-1">
+                      {groupedMentions.task.items.map((item) => (
+                        <MentionItem
+                          key={item.id}
+                          item={item}
+                          isSelected={
+                            allMentions[selectedIndex]?.id === item.id
+                          }
+                          ref={(el) => {
+                            itemRefs.current[item.id] = el;
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {groupedMentions.defaultTool.items.length > 0 && (
                   <div className="p-2 border-t">
                     <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
@@ -735,6 +805,31 @@ export function ChatMentionInputSuggestion({
                       ) : (
                         <div className="px-2 py-3 text-xs text-muted-foreground text-center">
                           No workflows found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                      {groupedMentions.task.title}
+                    </div>
+                    <div className="space-y-1">
+                      {groupedMentions.task.items.length > 0 ? (
+                        groupedMentions.task.items.map((item) => (
+                          <MentionItem
+                            key={item.id}
+                            item={item}
+                            isSelected={
+                              allMentions[selectedIndex]?.id === item.id
+                            }
+                            ref={(el) => {
+                              itemRefs.current[item.id] = el;
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                          No tasks found
                         </div>
                       )}
                     </div>

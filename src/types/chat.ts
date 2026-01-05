@@ -77,6 +77,11 @@ export const ChatMentionSchema = z.discriminatedUnion("type", [
       .nullish(),
   }),
   z.object({
+    type: z.literal("task"),
+    name: z.string(),
+    description: z.string().optional(),
+  }),
+  z.object({
     type: z.literal("agent"),
     name: z.string(),
     description: z.string().nullish(),
