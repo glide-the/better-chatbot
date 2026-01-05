@@ -29,6 +29,7 @@ export const TaskInvocation = memo(function TaskInvocation({
   const [previewContent, setPreviewContent] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const hasPreviewOpen = Boolean(previewKey);
 
   useEffect(() => {
@@ -77,6 +78,22 @@ export const TaskInvocation = memo(function TaskInvocation({
       window.clearInterval(intervalId);
     };
   }, [hasPreviewOpen, previewKey, taskId]);
+
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      setViewportHeight(window.innerHeight);
+    };
+
+    updateViewportHeight();
+    window.addEventListener("resize", updateViewportHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateViewportHeight);
+    };
+  }, []);
+
+  const previewContentMaxHeight =
+    viewportHeight != null ? Math.max(240, viewportHeight - 240) : undefined;
 
   return (
     <>
@@ -166,12 +183,21 @@ export const TaskInvocation = memo(function TaskInvocation({
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="mt-2 max-h-[60vh] overflow-auto rounded bg-muted p-3 font-mono text-[11px] whitespace-pre-wrap">
-                {previewContent
-                  ? previewContent
-                  : isRunning
-                    ? "任务正在运行，等待输出..."
-                    : "暂时没有内容。"}
+              <div
+                className="mt-2 rounded border bg-muted flex flex-col"
+                style={
+                  previewContentMaxHeight
+                    ? { maxHeight: previewContentMaxHeight }
+                    : undefined
+                }
+              >
+                <div className="flex-1 overflow-auto p-3 font-mono text-[11px] whitespace-pre-wrap break-words">
+                  {previewContent
+                    ? previewContent
+                    : isRunning
+                      ? "任务正在运行，等待输出..."
+                      : "暂时没有内容。"}
+                </div>
               </div>
             )}
           </div>
