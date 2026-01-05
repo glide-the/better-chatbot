@@ -36,6 +36,7 @@ import {
   extractInProgressToolPart,
   filterMcpServerCustomizations,
   loadMcpTools,
+  loadTaskTools,
   loadWorkFlowTools,
   loadAppDefaultTools,
   convertToSavePart,
@@ -229,6 +230,16 @@ export async function POST(request: Request) {
           )
           .orElse({});
 
+        const TASK_DEFAULT_TOOLS = await safe()
+          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+          .map(() =>
+            loadTaskTools({
+              mentions,
+              dataStream,
+            }),
+          )
+          .orElse({});
+
         const APP_DEFAULT_TOOLS = await safe()
           .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
           .map(() =>
@@ -244,7 +255,12 @@ export async function POST(request: Request) {
             inProgressToolParts.map(async (part) => {
               const output = await manualToolExecuteByLastMessage(
                 part,
-                { ...MCP_TOOLS, ...WORKFLOW_TOOLS, ...APP_DEFAULT_TOOLS },
+                {
+                  ...MCP_TOOLS,
+                  ...WORKFLOW_TOOLS,
+                  ...TASK_DEFAULT_TOOLS,
+                  ...APP_DEFAULT_TOOLS,
+                },
                 request.signal,
               );
               part.output = output;
@@ -286,6 +302,7 @@ export async function POST(request: Request) {
         const vercelAITooles = safe({
           ...MCP_TOOLS,
           ...WORKFLOW_TOOLS,
+          ...TASK_DEFAULT_TOOLS,
         })
           .map((t) => {
             const bindingTools =
@@ -317,7 +334,11 @@ export async function POST(request: Request) {
           logger.info(`binding tool count Image: ${imageTool?.model}`);
         } else {
           logger.info(
-            `binding tool count APP_DEFAULT: ${Object.keys(APP_DEFAULT_TOOLS ?? {}).length}, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${Object.keys(WORKFLOW_TOOLS ?? {}).length}`,
+            `binding tool count APP_DEFAULT: ${
+              Object.keys(APP_DEFAULT_TOOLS ?? {}).length
+            }, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${
+              Object.keys(WORKFLOW_TOOLS ?? {}).length
+            }, Task: ${Object.keys(TASK_DEFAULT_TOOLS ?? {}).length}`,
           );
         }
         logger.info(`model: ${chatModel?.provider}/${chatModel?.model}`);

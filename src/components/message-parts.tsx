@@ -50,6 +50,10 @@ import {
   VercelAIWorkflowToolStreamingResult,
   VercelAIWorkflowToolStreamingResultTag,
 } from "app-types/workflow";
+import {
+  VercelAITaskToolStreamingResult,
+  VercelAITaskToolStreamingResultTag,
+} from "app-types/task";
 import { Avatar, AvatarFallback, AvatarImage } from "ui/avatar";
 import { DefaultToolName, ImageToolName } from "lib/ai/tools";
 import {
@@ -59,6 +63,7 @@ import {
 } from "lib/keyboard-shortcuts";
 
 import { WorkflowInvocation } from "./tool-invocation/workflow-invocation";
+import { TaskInvocation } from "./tool-invocation/task-invocation";
 import dynamic from "next/dynamic";
 import { notify } from "lib/notify";
 import { ModelProviderIcon } from "ui/model-provider-icon";
@@ -867,6 +872,10 @@ export const ToolMessagePart = memo(
       () => VercelAIWorkflowToolStreamingResultTag.isMaybe(result),
       [result],
     );
+    const isTaskTool = useMemo(
+      () => VercelAITaskToolStreamingResultTag.isMaybe(result),
+      [result],
+    );
 
     const CustomToolComponent = useMemo(() => {
       if (
@@ -936,16 +945,20 @@ export const ToolMessagePart = memo(
     }, [toolName]);
 
     const isExpanded = useMemo(() => {
-      return expanded || result === null || isWorkflowTool;
-    }, [expanded, result, isWorkflowTool]);
+      return expanded || result === null || isWorkflowTool || isTaskTool;
+    }, [expanded, result, isWorkflowTool, isTaskTool]);
 
     const isExecuting = useMemo(() => {
       if (isWorkflowTool)
         return (
           (result as VercelAIWorkflowToolStreamingResult)?.status == "running"
         );
+      if (isTaskTool)
+        return ["pending", "running"].includes(
+          (result as VercelAITaskToolStreamingResult)?.status,
+        );
       return !isCompleted && isLast;
-    }, [isWorkflowTool, isCompleted, result, isLast]);
+    }, [isWorkflowTool, isTaskTool, isCompleted, result, isLast]);
 
     return (
       <div className="group w-full">
@@ -1045,6 +1058,10 @@ export const ToolMessagePart = memo(
                 {!result ? null : isWorkflowTool ? (
                   <WorkflowInvocation
                     result={result as VercelAIWorkflowToolStreamingResult}
+                  />
+                ) : isTaskTool ? (
+                  <TaskInvocation
+                    result={result as VercelAITaskToolStreamingResult}
                   />
                 ) : (
                   <div
