@@ -10,11 +10,12 @@ const RAW_TASKS = [
 
 export function buildTaskDefaultTools(
   dataStream: UIMessageStreamWriter,
+  userId: string,
 ): Record<string, Tool> {
   return RAW_TASKS.reduce(
     (acc, def) => ({
       ...acc,
-      [def.name]: taskToVercelAITool(def, dataStream),
+      [def.name]: taskToVercelAITool(def, dataStream, userId),
     }),
     {} as Record<string, Tool>,
   );

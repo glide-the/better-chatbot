@@ -430,9 +430,10 @@ export const loadWorkFlowTools = (opt: {
 export const loadTaskTools = (opt: {
   mentions?: ChatMention[];
   dataStream: UIMessageStreamWriter;
+  userId: string;
 }) =>
   safe(() => {
-    const tools = buildTaskDefaultTools(opt.dataStream);
+    const tools = buildTaskDefaultTools(opt.dataStream, opt.userId);
     if (opt.mentions?.length) {
       const taskMentions = opt.mentions.filter((m) => m.type === "task");
       if (taskMentions.length) {

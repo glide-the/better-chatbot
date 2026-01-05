@@ -66,6 +66,7 @@ export async function POST(request: Request) {
     if (!session?.user.id) {
       return new Response("Unauthorized", { status: 401 });
     }
+    const userId = session.user.id;
     const {
       id,
       message,
@@ -87,12 +88,12 @@ export async function POST(request: Request) {
       const newThread = await chatRepository.insertThread({
         id,
         title: "",
-        userId: session.user.id,
+        userId,
       });
       thread = await chatRepository.selectThreadDetails(newThread.id);
     }
 
-    if (thread!.userId !== session.user.id) {
+    if (thread!.userId !== userId) {
       return new Response("Forbidden", { status: 403 });
     }
 
@@ -183,17 +184,16 @@ export async function POST(request: Request) {
       >
     )?.agentId;
 
-    const agent = await rememberAgentAction(agentId, session.user.id);
-
-    if (agent?.instructions?.mentions) {
-      mentions.push(...agent.instructions.mentions);
-    }
+    const agent = await rememberAgentAction(agentId, userId);
+    const enabledMentions = agent?.instructions?.mentions?.length
+      ? [...mentions, ...agent.instructions.mentions]
+      : mentions;
 
     const useImageTool = Boolean(imageTool?.model);
 
     const isToolCallAllowed =
       supportToolCall &&
-      (toolChoice != "none" || mentions.length > 0) &&
+      (toolChoice != "none" || enabledMentions.length > 0) &&
       !useImageTool;
 
     const metadata: ChatMetadata = {
@@ -214,7 +214,7 @@ export async function POST(request: Request) {
           .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
           .map(() =>
             loadMcpTools({
-              mentions,
+              mentions: enabledMentions,
               allowedMcpServers,
             }),
           )
@@ -224,7 +224,7 @@ export async function POST(request: Request) {
           .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
           .map(() =>
             loadWorkFlowTools({
-              mentions,
+              mentions: enabledMentions,
               dataStream,
             }),
           )
@@ -234,8 +234,9 @@ export async function POST(request: Request) {
           .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
           .map(() =>
             loadTaskTools({
-              mentions,
+              mentions: enabledMentions,
               dataStream,
+              userId,
             }),
           )
           .orElse({});
@@ -244,7 +245,7 @@ export async function POST(request: Request) {
           .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
           .map(() =>
             loadAppDefaultTools({
-              mentions,
+              mentions: enabledMentions,
               allowedAppDefaultToolkit,
             }),
           )
@@ -324,7 +325,7 @@ export async function POST(request: Request) {
           .flat();
 
         logger.info(
-          `${agent ? `agent: ${agent.name}, ` : ""}tool mode: ${toolChoice}, mentions: ${mentions.length}`,
+          `${agent ? `agent: ${agent.name}, ` : ""}tool mode: ${toolChoice}, mentions: ${enabledMentions.length}`,
         );
 
         logger.info(

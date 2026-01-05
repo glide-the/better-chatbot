@@ -13,6 +13,16 @@ const buildToolName = (name: string) =>
     .replace(/\s+/g, "-")
     .toUpperCase();
 
+type ResearchAgentCodeInput = {
+  workspace?: string;
+  userId: string;
+  userFilesDir?: string;
+  userLogsDir?: string;
+  logDetailPath?: string;
+  logSummaryPath?: string;
+  logRunPath?: string;
+};
+
 export function taskToVercelAITool(
   {
     name,
@@ -22,6 +32,7 @@ export function taskToVercelAITool(
     description?: string;
   },
   dataStream: UIMessageStreamWriter,
+  userId: string,
 ) {
   const toolName = buildToolName(name);
 
@@ -41,6 +52,21 @@ export function taskToVercelAITool(
       let taskId: string | undefined;
 
       try {
+        const codeInput: ResearchAgentCodeInput = {
+          workspace: process.env.RESEARCH_AGENT_WORKSPACE ?? "workspace",
+          userId,
+          userFilesDir: process.env.RESEARCH_AGENT_USER_FILES_DIR ?? "files",
+          userLogsDir: process.env.RESEARCH_AGENT_USER_LOGS_DIR ?? "logs",
+          logDetailPath:
+            process.env.RESEARCH_AGENT_LOG_DETAIL_PATH ??
+            "logs/log_detail.jsonl",
+          logSummaryPath:
+            process.env.RESEARCH_AGENT_LOG_SUMMARY_PATH ??
+            "logs/log_summary.json",
+          logRunPath:
+            process.env.RESEARCH_AGENT_LOG_RUN_PATH ?? "logs/log_run.log",
+        };
+
         const submitRes = await fetch(
           `${process.env.RESEARCH_AGENT_BASE_URL}/runner/submit`,
           {
@@ -53,9 +79,7 @@ export function taskToVercelAITool(
                 reset: true,
               },
               payload: {
-                code_input: {
-                  userId: process.env.RESEARCH_AGENT_USER_ID ?? "unknown",
-                },
+                code_input: codeInput,
                 topic,
               },
             }),
