@@ -63,7 +63,7 @@ import {
 } from "lib/keyboard-shortcuts";
 
 import { WorkflowInvocation } from "./tool-invocation/workflow-invocation";
-import { TaskInvocation } from "./tool-invocation/task-invocation";
+import { TaskMessagePart } from "./task-message-part";
 import dynamic from "next/dynamic";
 import { notify } from "lib/notify";
 import { ModelProviderIcon } from "ui/model-provider-icon";
@@ -872,10 +872,6 @@ export const ToolMessagePart = memo(
       () => VercelAIWorkflowToolStreamingResultTag.isMaybe(result),
       [result],
     );
-    const isTaskTool = useMemo(
-      () => VercelAITaskToolStreamingResultTag.isMaybe(result),
-      [result],
-    );
 
     const CustomToolComponent = useMemo(() => {
       if (
@@ -911,6 +907,10 @@ export const ToolMessagePart = memo(
         );
       }
 
+      if (toolName === "research_agent_task") {
+        return <TaskMessagePart part={part} />;
+      }
+
       if (state === "output-available") {
         switch (toolName) {
           case DefaultToolName.CreatePieChart:
@@ -938,27 +938,33 @@ export const ToolMessagePart = memo(
         }
       }
       return null;
-    }, [toolName, state, onToolCallDirect, result, input]);
+    }, [
+      toolName,
+      state,
+      onToolCallDirect,
+      result,
+      input,
+      isLast,
+      showActions,
+      isError,
+      setMessages,
+    ]);
 
     const { serverName: mcpServerName, toolName: mcpToolName } = useMemo(() => {
       return extractMCPToolId(toolName);
     }, [toolName]);
 
     const isExpanded = useMemo(() => {
-      return expanded || result === null || isWorkflowTool || isTaskTool;
-    }, [expanded, result, isWorkflowTool, isTaskTool]);
+      return expanded || result === null || isWorkflowTool;
+    }, [expanded, result, isWorkflowTool]);
 
     const isExecuting = useMemo(() => {
       if (isWorkflowTool)
         return (
           (result as VercelAIWorkflowToolStreamingResult)?.status == "running"
         );
-      if (isTaskTool)
-        return ["pending", "running"].includes(
-          (result as VercelAITaskToolStreamingResult)?.status,
-        );
       return !isCompleted && isLast;
-    }, [isWorkflowTool, isTaskTool, isCompleted, result, isLast]);
+    }, [isWorkflowTool, isCompleted, result, isLast]);
 
     return (
       <div className="group w-full">
@@ -1059,10 +1065,6 @@ export const ToolMessagePart = memo(
                   <WorkflowInvocation
                     result={result as VercelAIWorkflowToolStreamingResult}
                   />
-                ) : isTaskTool ? (
-                  <TaskInvocation
-                    result={result as VercelAITaskToolStreamingResult}
-                  />
                 ) : (
                   <div
                     className={cn(
@@ -1153,7 +1155,6 @@ export const ToolMessagePart = memo(
                 )}
               </div>
             </div>
-
             {showActions && (
               <div className="flex flex-row gap-2 items-center">
                 <Tooltip>
