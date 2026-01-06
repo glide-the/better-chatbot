@@ -169,7 +169,7 @@ export function taskToVercelAITool(
           const finished = Boolean(data.finished);
           // 只有在 finished 为 true 且 info 不是 pending 时才算真正完成
           const isActuallyFinished = finished && data.info !== "pending";
-          const success = isActuallyFinished && data.info === "completed";
+          const success = isActuallyFinished && data.info === "end";
 
           // 获取 log_run_path 日志文件内容
           let logRunContent: string | undefined;
