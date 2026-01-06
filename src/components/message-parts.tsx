@@ -50,10 +50,6 @@ import {
   VercelAIWorkflowToolStreamingResult,
   VercelAIWorkflowToolStreamingResultTag,
 } from "app-types/workflow";
-import {
-  VercelAITaskToolStreamingResult,
-  VercelAITaskToolStreamingResultTag,
-} from "app-types/task";
 import { Avatar, AvatarFallback, AvatarImage } from "ui/avatar";
 import { DefaultToolName, ImageToolName } from "lib/ai/tools";
 import {

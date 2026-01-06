@@ -14,6 +14,9 @@ import {
 } from "ui/dialog";
 import { cn } from "lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { TaskMetadata } from "./task-metadata";
+import { DirectoryStructure } from "./directory-structure";
+import { DirectoryTree } from "./directory-tree";
 import "./activity-panel.css";
 
 interface TaskResultResponse {
@@ -25,6 +28,35 @@ interface TaskResultResponse {
     finished: boolean;
     result?: Record<string, string>;
   };
+}
+
+interface LogSummaryData {
+  topic?: string;
+  workspace?: string;
+  reports_dir?: string;
+  logs?: {
+    detail?: string;
+    summary?: string;
+    run?: string;
+  };
+  environment?: {
+    workspace?: string;
+    user_id?: string;
+    user_files_dir?: string;
+    user_logs_dir?: string;
+    current_working_directory?: string;
+  };
+  directory_structure?: Record<
+    string,
+    { path: string; purpose: string; type: "input" | "output" | "storage" }
+  >;
+  directory_tree?: {
+    name: string;
+    type: "directory" | "file";
+    children?: any[];
+    size?: number;
+  };
+  assistant_summary?: string;
 }
 
 type TabType = "logs" | "files";
@@ -81,6 +113,9 @@ export const ActivityPanel = memo(function ActivityPanel({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [parsedSummary, setParsedSummary] = useState<LogSummaryData | null>(
+    null,
+  );
   const hasPreviewOpen = Boolean(previewKey);
 
   useEffect(() => {
@@ -250,6 +285,16 @@ export const ActivityPanel = memo(function ActivityPanel({
           ...prev,
           [logSource]: content,
         }));
+
+        if (logSource === "log_summary") {
+          try {
+            const parsed = JSON.parse(content) as LogSummaryData;
+            setParsedSummary(parsed);
+          } catch (e) {
+            console.error("Failed to parse log_summary JSON:", e);
+            setParsedSummary(null);
+          }
+        }
       }
     } catch (error) {
       console.error(`Failed to fetch log content for ${logSource}:`, error);
@@ -272,7 +317,7 @@ export const ActivityPanel = memo(function ActivityPanel({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[9998]"
               onClick={onClose}
             />
             <motion.div
@@ -280,7 +325,7 @@ export const ActivityPanel = memo(function ActivityPanel({
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 w-96 bg-background border-l border-border shadow-2xl z-50 flex flex-col"
+              className="fixed right-0 top-0 bottom-0 w-96 bg-background border-l border-border shadow-2xl z-[9999] flex flex-col"
             >
               <div className="h-12 px-4 flex items-center justify-between border-b border-border bg-background">
                 <div className="flex items-center space-x-2">
@@ -383,6 +428,41 @@ export const ActivityPanel = memo(function ActivityPanel({
                         <AlertTitle>{error.name}</AlertTitle>
                         <AlertDescription>{error.message}</AlertDescription>
                       </Alert>
+                    )}
+
+                    {parsedSummary && (
+                      <>
+                        <div className="mb-4 p-3 bg-card rounded-lg border border-border">
+                          <div className="text-xs font-medium text-foreground mb-2">
+                            任务元数据
+                          </div>
+                          <TaskMetadata metadata={parsedSummary} />
+                        </div>
+
+                        {parsedSummary.directory_structure &&
+                          Object.keys(parsedSummary.directory_structure)
+                            .length > 0 && (
+                            <div className="mb-4 p-3 bg-card rounded-lg border border-border">
+                              <div className="text-xs font-medium text-foreground mb-2">
+                                目录结构
+                              </div>
+                              <DirectoryStructure
+                                structure={parsedSummary.directory_structure}
+                              />
+                            </div>
+                          )}
+
+                        {parsedSummary.directory_tree && (
+                          <div className="mb-4 p-3 bg-card rounded-lg border border-border">
+                            <div className="text-xs font-medium text-foreground mb-2">
+                              目录树
+                            </div>
+                            <DirectoryTree
+                              tree={parsedSummary.directory_tree}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* 日志源文件子标签 */}

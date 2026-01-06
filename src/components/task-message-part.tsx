@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { ToolUIPart, getToolName, UIMessage } from "ai";
+import { ToolUIPart } from "ai";
 import {
   VercelAITaskToolStreamingResultTag,
   VercelAITaskToolStreamingResult,
