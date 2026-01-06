@@ -4,12 +4,9 @@ import { taskToVercelAITool } from "./research-agent-task";
 const RAW_TASKS = [
   {
     name: "research_agent_task",
-    description: `动态填充的《基础配置模板》，以此作为调用工具的依据: {
-    "角色定义": "在此处根据客户问题动态设定角色",
-    "任务": "基于模糊产品名称，调研市场主流品牌及规格分布",
-    "通用规则": "按市场占有率排序，区分进口与国产",
-    "调研关键词": "[产品名称] + 常用规格 + 头部品牌(Corning/Nest/Falcon等) + 材质特性"
-  }`,
+    // 这里的 description 主要给路由/规划 Agent 看，让它知道何时调用此工具
+    description:
+      "当用户需要对某一类产品进行深入的市场调研、规格分析或品牌对比时调用此工具。该工具需要接收结构化的调研配置参数。",
   },
 ] as const;
 

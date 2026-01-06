@@ -1,16 +1,32 @@
-import { jsonSchema, tool as createTool, UIMessageStreamWriter } from "ai";
+import { tool as createTool, UIMessageStreamWriter } from "ai";
 import { z } from "zod";
 import { VercelAITaskToolStreamingResultTag } from "app-types/task";
 
 const inputSchema = z.object({
-  topic: z
+  role_definition: z
     .string()
-    .describe(`动态填充的《基础配置模板》，以此作为调用工具的依据: {
-    "角色定义": "在此处根据客户问题动态设定角色",
-    "任务": "基于模糊产品名称，调研市场主流品牌及规格分布",
-    "通用规则": "按市场占有率排序，区分进口与国产",
-    "调研关键词": "[产品名称] + 常用规格 + 头部品牌(Corning/Nest/Falcon等) + 材质特性"
-  }`),
+    .describe(
+      "角色定义：根据客户的具体问题动态设定的专家角色（例如：资深实验室采购顾问、化工市场分析师）",
+    ),
+
+  task_objective: z
+    .string()
+    .describe(
+      "任务目标：基于模糊的产品名称，明确调研的具体范围（例如：调研市场主流品牌及规格分布）",
+    ),
+
+  ranking_rules: z
+    .string()
+    .default("按市场占有率排序，区分进口与国产")
+    .describe(
+      "通用规则：定义数据排序或分类的逻辑，如按市占率、价格区间或产地分类",
+    ),
+
+  search_keywords: z
+    .array(z.string())
+    .describe(
+      "调研关键词列表：构造具体的搜索组合，格式如 ['产品名称 + 常用规格', '产品 + 头部品牌(Corning/Nest等)', '产品 + 材质特性']",
+    ),
 });
 
 const buildToolName = (name: string) =>
@@ -45,8 +61,11 @@ export function taskToVercelAITool(
 
   const tool = createTool({
     description: description ?? name,
-    inputSchema: jsonSchema(inputSchema),
-    async execute({ topic }, { toolCallId, abortSignal }) {
+    inputSchema: inputSchema,
+    async execute(
+      { role_definition, task_objective, ranking_rules, search_keywords },
+      { toolCallId, abortSignal },
+    ) {
       const now = Date.now();
       const baseResult = VercelAITaskToolStreamingResultTag.create({
         toolCallId,
@@ -87,7 +106,10 @@ export function taskToVercelAITool(
               },
               payload: {
                 code_input: codeInput,
-                topic,
+                topic: `role_definition: """${role_definition}""", 
+                task_objective: """${task_objective}""",
+                ranking_rules: """${ranking_rules}""",
+                search_keywords: ${JSON.stringify(search_keywords)}`,
               },
             }),
           },
