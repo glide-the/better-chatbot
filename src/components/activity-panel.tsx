@@ -430,7 +430,7 @@ export const ActivityPanel = memo(function ActivityPanel({
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono text-foreground truncate max-w-[180px] whitespace-nowrap">
-                              #{taskId}
+                              {taskId}
                             </span>
                             <Copy className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
@@ -552,7 +552,7 @@ export const ActivityPanel = memo(function ActivityPanel({
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono text-foreground truncate max-w-[180px] whitespace-nowrap">
-                              #{taskId}
+                              {taskId}
                             </span>
                             <Copy className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
