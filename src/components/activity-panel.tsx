@@ -360,7 +360,7 @@ export const ActivityPanel = memo(function ActivityPanel({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
               onClick={onClose}
             />
             <motion.div
@@ -368,32 +368,32 @@ export const ActivityPanel = memo(function ActivityPanel({
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 w-96 bg-[#0F0F12] border-l border-[#2D2D36] shadow-2xl z-50 flex flex-col"
+              className="fixed right-0 top-0 bottom-0 w-96 bg-background border-l border-border shadow-2xl z-50 flex flex-col"
             >
-              <div className="h-12 px-4 flex items-center justify-between border-b border-[#2D2D36] bg-[#0F0F12]">
+              <div className="h-12 px-4 flex items-center justify-between border-b border-border bg-background">
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-white font-serif text-lg font-bold">
+                  <h1 className="text-foreground font-serif text-lg font-bold">
                     活动
                   </h1>
-                  <span className="text-[#8A8A94] text-sm font-mono tracking-wide animate-pulse">
+                  <span className="text-muted-foreground text-sm font-mono tracking-wide animate-pulse">
                     {duration}
                   </span>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#8A8A94] hover:bg-[#1A1A20] hover:text-white transition-colors duration-200"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors duration-200"
                 >
                   <X className="size-4" />
                 </button>
               </div>
 
-              <div className="flex border-b border-[#2D2D36] bg-[#141418]">
+              <div className="flex border-b border-border bg-muted">
                 <button
                   className={cn(
                     "flex-1 px-4 py-3 text-sm font-medium transition-colors",
                     activeTab === "logs"
-                      ? "text-[#00F0FF] border-b-2 border-[#00F0FF]"
-                      : "text-[#8A8A94] hover:text-white",
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                   onClick={() => setActiveTab("logs")}
                 >
@@ -403,8 +403,8 @@ export const ActivityPanel = memo(function ActivityPanel({
                   className={cn(
                     "flex-1 px-4 py-3 text-sm font-medium transition-colors",
                     activeTab === "files"
-                      ? "text-[#00F0FF] border-b-2 border-[#00F0FF]"
-                      : "text-[#8A8A94] hover:text-white",
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                   onClick={() => setActiveTab("files")}
                 >
@@ -416,37 +416,39 @@ export const ActivityPanel = memo(function ActivityPanel({
                 {activeTab === "logs" ? (
                   <div className="px-4 py-4">
                     {taskId && (
-                      <div className="mb-4 p-3 bg-[#141418] rounded-lg border border-[#2D2D36]/50">
+                      <div className="mb-4 p-3 bg-card rounded-lg border border-border">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-[#8A8A94]">
+                          <span className="text-xs text-muted-foreground">
                             任务 ID
                           </span>
-                          <span className="text-xs font-mono text-white">
+                          <span className="text-xs font-mono text-foreground">
                             #{taskId}
                           </span>
                         </div>
                         {taskName && (
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-[#8A8A94]">
+                            <span className="text-xs text-muted-foreground">
                               任务名称
                             </span>
-                            <span className="text-xs text-white truncate max-w-[150px]">
+                            <span className="text-xs text-foreground truncate max-w-[150px]">
                               {taskName}
                             </span>
                           </div>
                         )}
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-[#8A8A94]">状态</span>
+                          <span className="text-xs text-muted-foreground">
+                            状态
+                          </span>
                           <span
                             className={cn(
                               "text-xs font-medium",
                               status === "completed"
-                                ? "text-emerald-400"
+                                ? "text-emerald-500"
                                 : status === "fail"
-                                  ? "text-red-400"
+                                  ? "text-destructive"
                                   : status === "running"
-                                    ? "text-[#00F0FF] animate-pulse"
-                                    : "text-yellow-400",
+                                    ? "text-primary animate-pulse"
+                                    : "text-yellow-500",
                             )}
                           >
                             {status}
@@ -467,24 +469,26 @@ export const ActivityPanel = memo(function ActivityPanel({
 
                     {isLoadingLogs ? (
                       <div className="text-center py-12">
-                        <div className="text-[#8A8A94] text-sm">加载中...</div>
+                        <div className="text-muted-foreground text-sm">
+                          加载中...
+                        </div>
                       </div>
                     ) : activities.length === 0 ? (
                       <div className="text-center py-12">
-                        <div className="text-[#8A8A94] text-sm">
+                        <div className="text-muted-foreground text-sm">
                           暂无活动记录
                         </div>
-                        <div className="text-[#5A5A64] text-xs mt-2">
+                        <div className="text-muted-foreground/80 text-xs mt-2">
                           任务正在初始化...
                         </div>
                       </div>
                     ) : (
                       Object.entries(groupedActivities).map(([type, items]) => (
                         <div key={type} className="mb-6">
-                          <h2 className="flex items-center text-white font-serif text-base font-semibold mb-3">
-                            <span className="w-1 h-5 bg-[#00F0FF] rounded-full mr-3"></span>
+                          <h2 className="flex items-center text-foreground font-serif text-base font-semibold mb-3">
+                            <span className="w-1 h-5 bg-primary rounded-full mr-3"></span>
                             {typeLabels[type] || type}
-                            <span className="ml-2 text-xs text-[#8A8A94] font-normal">
+                            <span className="ml-2 text-xs text-muted-foreground font-normal">
                               ({items.length})
                             </span>
                           </h2>
@@ -493,7 +497,7 @@ export const ActivityPanel = memo(function ActivityPanel({
                             {items.map((activity, index) => (
                               <div
                                 key={activity.id || `${type}-${index}`}
-                                className="task-item flex items-start p-3 rounded-lg bg-[#141418]/50 border border-[#2D2D36]/30 hover:bg-[#1A1A20] hover:border-[#00F0FF]/20 transition-all duration-200 group"
+                                className="task-item flex items-start p-3 rounded-lg bg-muted/50 border border-border hover:bg-muted hover:border-primary/20 transition-all duration-200 group"
                               >
                                 <div className="flex-shrink-0 mr-3 text-lg">
                                   {getIconForType(
@@ -503,12 +507,12 @@ export const ActivityPanel = memo(function ActivityPanel({
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-white text-sm font-medium break-words">
+                                    <p className="text-foreground text-sm font-medium break-words">
                                       {activity.message}
                                     </p>
                                   </div>
                                   {activity.details && (
-                                    <p className="text-[#8A8A94] text-xs font-mono break-words">
+                                    <p className="text-muted-foreground text-xs font-mono break-words">
                                       {typeof activity.details === "string"
                                         ? activity.details
                                         : JSON.stringify(activity.details)}
@@ -525,17 +529,17 @@ export const ActivityPanel = memo(function ActivityPanel({
                 ) : (
                   <div className="px-4 py-4">
                     {taskId && (
-                      <div className="mb-4 p-3 bg-[#141418] rounded-lg border border-[#2D2D36]/50">
+                      <div className="mb-4 p-3 bg-card rounded-lg border border-border">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-[#8A8A94]">
+                          <span className="text-xs text-muted-foreground">
                             任务 ID
                           </span>
-                          <span className="text-xs font-mono text-white">
+                          <span className="text-xs font-mono text-foreground">
                             #{taskId}
                           </span>
                         </div>
                         {info && (
-                          <div className="mb-2 text-xs text-white leading-relaxed">
+                          <div className="mb-2 text-xs text-foreground leading-relaxed">
                             {info}
                           </div>
                         )}
@@ -560,7 +564,7 @@ export const ActivityPanel = memo(function ActivityPanel({
                             size="sm"
                             variant="outline"
                             className={cn(
-                              "h-7 text-[10px] px-3 bg-[#141418]/50 border-[#2D2D36]/50 hover:bg-[#1A1A20] hover:border-[#00F0FF]/20",
+                              "h-7 text-[10px] px-3 bg-muted/50 border-border hover:bg-muted hover:border-primary/20",
                             )}
                             disabled={!taskId}
                             onClick={() => {
@@ -576,8 +580,10 @@ export const ActivityPanel = memo(function ActivityPanel({
                       </div>
                     ) : (
                       <div className="text-center py-12">
-                        <div className="text-[#8A8A94] text-sm">暂无文件</div>
-                        <div className="text-[#5A5A64] text-xs mt-2">
+                        <div className="text-muted-foreground text-sm">
+                          暂无文件
+                        </div>
+                        <div className="text-muted-foreground/80 text-xs mt-2">
                           任务完成后会生成文件
                         </div>
                       </div>
@@ -586,8 +592,8 @@ export const ActivityPanel = memo(function ActivityPanel({
                 )}
               </div>
 
-              <div className="h-9 bg-[#141418] px-4 flex items-center text-[#8A8A94] text-xs border-t border-[#2D2D36]">
-                <span className="mr-2 text-[#00F0FF]">≪</span>
+              <div className="h-9 bg-muted px-4 flex items-center text-muted-foreground text-xs border-t border-border">
+                <span className="mr-2 text-primary">≪</span>
                 <span>实时追踪任务执行进度</span>
               </div>
             </motion.div>
