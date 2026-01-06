@@ -16,15 +16,6 @@ import { cn } from "lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import "./activity-panel.css";
 
-export interface ActivityEvent {
-  id: string;
-  timestamp: number;
-  type: "event" | "action" | "log";
-  level?: "info" | "warning" | "error" | "success";
-  message: string;
-  details?: any;
-}
-
 interface TaskResultResponse {
   code: number;
   msg: string;
@@ -37,6 +28,7 @@ interface TaskResultResponse {
 }
 
 type TabType = "logs" | "files";
+type LogSourceType = "log_run" | "log_detail" | "log_summary";
 
 interface ActivityPanelProps {
   isOpen: boolean;
@@ -72,9 +64,17 @@ export const ActivityPanel = memo(function ActivityPanel({
 
   const isRunning = status === "pending" || status === "running";
   const [activeTab, setActiveTab] = useState<TabType>("logs");
-  const [activities, setActivities] = useState<ActivityEvent[]>([]);
+  const [activeLogSource, setActiveLogSource] =
+    useState<LogSourceType>("log_run");
+  const [logContents, setLogContents] = useState<Record<LogSourceType, string>>(
+    {
+      log_run: "",
+      log_detail: "",
+      log_summary: "",
+    },
+  );
+  const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [duration, setDuration] = useState<string>("0s");
-  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -96,14 +96,30 @@ export const ActivityPanel = memo(function ActivityPanel({
     updateDuration();
     const interval = isRunning ? setInterval(updateDuration, 1000) : null;
 
-    if (taskId && activeTab === "logs") {
-      fetchActivityLogs(taskId);
-    }
-
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isOpen, taskId, status, startedAt, endedAt, activeTab]);
+  }, [isOpen, status, startedAt, endedAt, isRunning]);
+
+  // 单独处理日志内容获取和自动刷新
+  useEffect(() => {
+    if (!isOpen || !taskId || activeTab !== "logs") return;
+
+    // 立即获取一次
+    fetchLogContent(taskId, activeLogSource);
+
+    // 如果任务正在运行，设置定时刷新
+    let refreshInterval: NodeJS.Timeout | null = null;
+    if (isRunning) {
+      refreshInterval = setInterval(() => {
+        fetchLogContent(taskId, activeLogSource);
+      }, 2000); // 每 2 秒刷新一次
+    }
+
+    return () => {
+      if (refreshInterval) clearInterval(refreshInterval);
+    };
+  }, [isOpen, taskId, activeTab, activeLogSource, isRunning]);
 
   const handleDownload = async (filename: string) => {
     if (!taskId) return;
@@ -199,14 +215,13 @@ export const ActivityPanel = memo(function ActivityPanel({
   const previewContentMaxHeight =
     viewportHeight != null ? Math.max(240, viewportHeight - 240) : undefined;
 
-  const fetchActivityLogs = async (id: string) => {
+  const fetchLogContent = async (id: string, logSource: LogSourceType) => {
     try {
-      // 乐观更新：不设置加载状态，保留旧数据显示
-      // 只在首次加载（activities 为空）时显示加载状态
-      if (activities.length === 0) {
-        setIsLoadingLogs(true);
+      if (!logContents[logSource]) {
+        setIsLoadingLog(true);
       }
 
+      const logSourceKey = `${logSource}_path`;
       const resultRes = await fetch(
         `/api/research-task/result?task_id=${encodeURIComponent(id)}`,
       );
@@ -218,136 +233,29 @@ export const ActivityPanel = memo(function ActivityPanel({
       const resultData = (await resultRes.json()) as TaskResultResponse;
       const logPaths = resultData.data?.result;
 
-      if (!logPaths) {
-        console.log("No log paths available");
+      if (!logPaths || !logPaths[logSourceKey]) {
+        console.log(`No log path available for ${logSource}`);
         return;
       }
 
-      const activityEvents: ActivityEvent[] = [];
+      const downloadRes = await fetch(
+        `/api/research-task/download?task_id=${encodeURIComponent(
+          id,
+        )}&result_source_name=${encodeURIComponent(logSourceKey)}`,
+      );
 
-      const logFileKeys = [
-        "log_run_path",
-        "log_detail_path",
-        "log_summary_path",
-      ];
-
-      for (const key of logFileKeys) {
-        const path = logPaths[key];
-        if (!path) continue;
-
-        try {
-          const downloadRes = await fetch(
-            `/api/research-task/download?task_id=${encodeURIComponent(
-              id,
-            )}&result_source_name=${encodeURIComponent(key)}`,
-          );
-
-          if (downloadRes.ok) {
-            const content = await downloadRes.text();
-            const parsedActivities = parseLogContent(content, key);
-
-            parsedActivities.forEach((activity, index) => {
-              activityEvents.push({
-                id: `${key}-${index}`,
-                timestamp: activity.timestamp || Date.now(),
-                type: activity.type || "log",
-                level: activity.level,
-                message: activity.message,
-                details: activity.details,
-              });
-            });
-          }
-        } catch (error) {
-          console.error(`Failed to fetch log ${key}:`, error);
-        }
+      if (downloadRes.ok) {
+        const content = await downloadRes.text();
+        setLogContents((prev) => ({
+          ...prev,
+          [logSource]: content,
+        }));
       }
-
-      activityEvents.sort((a, b) => a.timestamp - b.timestamp);
-      setActivities(activityEvents);
     } catch (error) {
-      console.error("Failed to fetch activity logs:", error);
+      console.error(`Failed to fetch log content for ${logSource}:`, error);
     } finally {
-      setIsLoadingLogs(false);
+      setIsLoadingLog(false);
     }
-  };
-
-  const parseLogContent = (
-    content: string,
-    sourceType: string,
-  ): ActivityEvent[] => {
-    const events: ActivityEvent[] = [];
-    const lines = content.split("\n").filter((line) => line.trim());
-
-    lines.forEach((line, index) => {
-      let activity: Partial<ActivityEvent> = {};
-
-      if (sourceType === "log_detail_path") {
-        try {
-          const json = JSON.parse(line);
-          activity = {
-            id: `${sourceType}-${index}`,
-            timestamp: json.timestamp || Date.now(),
-            type: json.type || "log",
-            level: json.level,
-            message: json.message || line,
-            details: json.details,
-          };
-        } catch {
-          activity = {
-            id: `${sourceType}-${index}`,
-            timestamp: Date.now(),
-            type: "log",
-            message: line,
-          };
-        }
-      } else if (
-        sourceType === "log_run_path" ||
-        sourceType === "log_summary_path"
-      ) {
-        activity = {
-          id: `${sourceType}-${index}`,
-          timestamp: Date.now(),
-          type: sourceType === "log_run_path" ? "log" : "event",
-          message: line,
-        };
-      }
-
-      if (activity.message && activity.type) {
-        events.push(activity as ActivityEvent);
-      }
-    });
-
-    return events;
-  };
-
-  const getIconForType = (type: string, level?: string) => {
-    switch (type) {
-      case "event":
-        return "📋";
-      case "action":
-        return "⚡";
-      case "log":
-        return level === "error" ? "❌" : level === "warning" ? "⚠️" : "📝";
-      default:
-        return "•";
-    }
-  };
-
-  const groupedActivities = activities.reduce(
-    (acc, activity) => {
-      if (!acc[activity.type]) {
-        acc[activity.type] = [];
-      }
-      acc[activity.type].push(activity);
-      return acc;
-    },
-    {} as Record<string, ActivityEvent[]>,
-  );
-
-  const typeLabels: Record<string, string> = {
-    event: "事件",
-    action: "动作",
-    log: "日志",
   };
 
   const copyToClipboard = (text: string) => {
@@ -401,7 +309,7 @@ export const ActivityPanel = memo(function ActivityPanel({
                   )}
                   onClick={() => setActiveTab("logs")}
                 >
-                  活动日志 ({activities.length})
+                  活动日志
                 </button>
                 <button
                   className={cn(
@@ -477,66 +385,64 @@ export const ActivityPanel = memo(function ActivityPanel({
                       </Alert>
                     )}
 
-                    {isLoadingLogs ? (
+                    {/* 日志源文件子标签 */}
+                    <div className="flex gap-1 mb-3 p-1 bg-muted rounded-lg">
+                      <button
+                        className={cn(
+                          "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                          activeLogSource === "log_run"
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                        onClick={() => setActiveLogSource("log_run")}
+                      >
+                        运行日志
+                      </button>
+                      <button
+                        className={cn(
+                          "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                          activeLogSource === "log_detail"
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                        onClick={() => setActiveLogSource("log_detail")}
+                      >
+                        详细日志
+                      </button>
+                      <button
+                        className={cn(
+                          "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                          activeLogSource === "log_summary"
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                        onClick={() => setActiveLogSource("log_summary")}
+                      >
+                        摘要日志
+                      </button>
+                    </div>
+
+                    {isLoadingLog ? (
                       <div className="text-center py-12">
                         <div className="text-muted-foreground text-sm">
                           加载中...
                         </div>
                       </div>
-                    ) : activities.length === 0 ? (
+                    ) : !logContents[activeLogSource] ? (
                       <div className="text-center py-12">
                         <div className="text-muted-foreground text-sm">
-                          暂无活动记录
+                          暂无日志内容
                         </div>
                         <div className="text-muted-foreground/80 text-xs mt-2">
                           任务正在初始化...
                         </div>
                       </div>
                     ) : (
-                      // 只输出logs
-                      Object.entries(groupedActivities)
-                        .filter(([type]) => type === "log")
-                        .map(([type, items]) => (
-                          <div key={type} className="mb-6">
-                            <h2 className="flex items-center text-foreground font-serif text-base font-semibold mb-3">
-                              <span className="w-1 h-5 bg-primary rounded-full mr-3"></span>
-                              {typeLabels[type] || type}
-                              <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                ({items.length})
-                              </span>
-                            </h2>
-
-                            <div className="space-y-2">
-                              {items.map((activity, index) => (
-                                <div
-                                  key={activity.id || `${type}-${index}`}
-                                  className="task-item flex items-start p-3 rounded-lg bg-muted/50 border border-border hover:bg-muted hover:border-primary/20 transition-all duration-200 group"
-                                >
-                                  <div className="flex-shrink-0 mr-3 text-lg">
-                                    {getIconForType(
-                                      activity.type,
-                                      activity.level,
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="text-foreground text-sm font-medium break-words">
-                                        {activity.message}
-                                      </p>
-                                    </div>
-                                    {activity.details && (
-                                      <p className="text-muted-foreground text-xs font-mono break-words">
-                                        {typeof activity.details === "string"
-                                          ? activity.details
-                                          : JSON.stringify(activity.details)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))
+                      <div className="rounded-lg border bg-muted">
+                        <div className="max-h-[500px] overflow-auto p-3 font-mono text-[11px] whitespace-pre-wrap break-words">
+                          {logContents[activeLogSource]}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ) : (
