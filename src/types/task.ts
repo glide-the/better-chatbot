@@ -18,6 +18,7 @@ export type VercelAITaskToolStreamingResult = {
   finished?: boolean;
   result?: Record<string, string>;
   error?: { name: string; message: string };
+  logRunPath?: string;
 };
 
 export const VercelAITaskToolStreamingResultTag =

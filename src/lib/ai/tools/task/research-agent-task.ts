@@ -171,6 +171,22 @@ export function taskToVercelAITool(
           const isActuallyFinished = finished && data.info !== "pending";
           const success = isActuallyFinished && data.info === "completed";
 
+          // 获取 log_run_path 日志文件内容
+          let logRunContent: string | undefined;
+          try {
+            const logUrl = `${process.env.RESEARCH_AGENT_BASE_URL}/runner/result_source?task_id=${encodeURIComponent(
+              taskId,
+            )}&result_source_name=log_run_path`;
+
+            const logRes = await fetch(logUrl, { signal: abortSignal });
+            if (logRes.ok) {
+              logRunContent = await logRes.text();
+            }
+          } catch (error) {
+            // 如果获取日志失败，不影响主流程，只是不包含日志内容
+            console.error("Failed to fetch log_run_path:", error);
+          }
+
           lastResult = {
             ...lastResult,
             taskId: data.task_id,
@@ -183,6 +199,7 @@ export function taskToVercelAITool(
             info: data.info,
             finished: isActuallyFinished,
             result: data.result ?? lastResult.result,
+            logRunPath: logRunContent,
           };
 
           dataStream.write({
