@@ -59,7 +59,7 @@ import {
 } from "lib/keyboard-shortcuts";
 
 import { WorkflowInvocation } from "./tool-invocation/workflow-invocation";
-import { TaskMessagePart } from "./task-message-part";
+import { TaskMessagePart } from "./task-message/task-message-part";
 import dynamic from "next/dynamic";
 import { notify } from "lib/notify";
 import { ModelProviderIcon } from "ui/model-provider-icon";

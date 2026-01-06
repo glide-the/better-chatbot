@@ -6,7 +6,7 @@ import {
   VercelAITaskToolStreamingResultTag,
   VercelAITaskToolStreamingResult,
 } from "app-types/task";
-import { TaskInvocation } from "./tool-invocation/task-invocation";
+import { TaskInvocation } from "./task-invocation";
 import { ActivityPanel } from "./activity-panel";
 
 export const TaskMessagePart = memo(function TaskMessagePart({
