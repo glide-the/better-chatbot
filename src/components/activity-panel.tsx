@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { X, FileDown, Loader2 } from "lucide-react";
+import { X, FileDown, Loader2, Copy } from "lucide-react";
 import { VercelAITaskToolStreamingResult } from "app-types/task";
 import { Button } from "ui/button";
 import { Alert, AlertDescription, AlertTitle } from "ui/alert";
@@ -350,6 +350,10 @@ export const ActivityPanel = memo(function ActivityPanel({
     log: "日志",
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -417,20 +421,26 @@ export const ActivityPanel = memo(function ActivityPanel({
                   <div className="px-4 py-4">
                     {taskId && (
                       <div className="mb-4 p-3 bg-card rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
+                        <div
+                          className="flex items-center justify-between mb-2 group cursor-pointer"
+                          onClick={() => copyToClipboard(taskId)}
+                        >
                           <span className="text-xs text-muted-foreground">
                             任务 ID
                           </span>
-                          <span className="text-xs font-mono text-foreground">
-                            #{taskId}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-foreground truncate max-w-[180px] whitespace-nowrap">
+                              #{taskId}
+                            </span>
+                            <Copy className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
                         {taskName && (
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs text-muted-foreground">
                               任务名称
                             </span>
-                            <span className="text-xs text-foreground truncate max-w-[150px]">
+                            <span className="text-xs text-foreground truncate max-w-[150px] whitespace-nowrap">
                               {taskName}
                             </span>
                           </div>
@@ -483,60 +493,69 @@ export const ActivityPanel = memo(function ActivityPanel({
                         </div>
                       </div>
                     ) : (
-                      Object.entries(groupedActivities).map(([type, items]) => (
-                        <div key={type} className="mb-6">
-                          <h2 className="flex items-center text-foreground font-serif text-base font-semibold mb-3">
-                            <span className="w-1 h-5 bg-primary rounded-full mr-3"></span>
-                            {typeLabels[type] || type}
-                            <span className="ml-2 text-xs text-muted-foreground font-normal">
-                              ({items.length})
-                            </span>
-                          </h2>
+                      // 只输出logs
+                      Object.entries(groupedActivities)
+                        .filter(([type]) => type === "log")
+                        .map(([type, items]) => (
+                          <div key={type} className="mb-6">
+                            <h2 className="flex items-center text-foreground font-serif text-base font-semibold mb-3">
+                              <span className="w-1 h-5 bg-primary rounded-full mr-3"></span>
+                              {typeLabels[type] || type}
+                              <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                ({items.length})
+                              </span>
+                            </h2>
 
-                          <div className="space-y-2">
-                            {items.map((activity, index) => (
-                              <div
-                                key={activity.id || `${type}-${index}`}
-                                className="task-item flex items-start p-3 rounded-lg bg-muted/50 border border-border hover:bg-muted hover:border-primary/20 transition-all duration-200 group"
-                              >
-                                <div className="flex-shrink-0 mr-3 text-lg">
-                                  {getIconForType(
-                                    activity.type,
-                                    activity.level,
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-foreground text-sm font-medium break-words">
-                                      {activity.message}
-                                    </p>
+                            <div className="space-y-2">
+                              {items.map((activity, index) => (
+                                <div
+                                  key={activity.id || `${type}-${index}`}
+                                  className="task-item flex items-start p-3 rounded-lg bg-muted/50 border border-border hover:bg-muted hover:border-primary/20 transition-all duration-200 group"
+                                >
+                                  <div className="flex-shrink-0 mr-3 text-lg">
+                                    {getIconForType(
+                                      activity.type,
+                                      activity.level,
+                                    )}
                                   </div>
-                                  {activity.details && (
-                                    <p className="text-muted-foreground text-xs font-mono break-words">
-                                      {typeof activity.details === "string"
-                                        ? activity.details
-                                        : JSON.stringify(activity.details)}
-                                    </p>
-                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="text-foreground text-sm font-medium break-words">
+                                        {activity.message}
+                                      </p>
+                                    </div>
+                                    {activity.details && (
+                                      <p className="text-muted-foreground text-xs font-mono break-words">
+                                        {typeof activity.details === "string"
+                                          ? activity.details
+                                          : JSON.stringify(activity.details)}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))
                     )}
                   </div>
                 ) : (
                   <div className="px-4 py-4">
                     {taskId && (
                       <div className="mb-4 p-3 bg-card rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
+                        <div
+                          className="flex items-center justify-between mb-2 group cursor-pointer"
+                          onClick={() => copyToClipboard(taskId)}
+                        >
                           <span className="text-xs text-muted-foreground">
                             任务 ID
                           </span>
-                          <span className="text-xs font-mono text-foreground">
-                            #{taskId}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-foreground truncate max-w-[180px] whitespace-nowrap">
+                              #{taskId}
+                            </span>
+                            <Copy className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
                         {info && (
                           <div className="mb-2 text-xs text-foreground leading-relaxed">
