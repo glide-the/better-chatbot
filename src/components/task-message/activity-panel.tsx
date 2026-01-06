@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X, Copy } from "lucide-react";
 import { VercelAITaskToolStreamingResult } from "app-types/task";
@@ -92,6 +92,7 @@ export const ActivityPanel = memo(function ActivityPanel({
   const [parsedSummary, setParsedSummary] = useState<LogSummaryData | null>(
     null,
   );
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -115,6 +116,8 @@ export const ActivityPanel = memo(function ActivityPanel({
   useEffect(() => {
     if (!isOpen || !taskId) return;
 
+    isFirstLoad.current = true;
+
     // 立即获取一次
     fetchLogContent(taskId, activeLogSource);
 
@@ -133,8 +136,11 @@ export const ActivityPanel = memo(function ActivityPanel({
 
   const fetchLogContent = async (id: string, logSource: LogSourceType) => {
     try {
-      if (!logContents[logSource]) {
+      const isFirstTime = isFirstLoad.current;
+
+      if (isFirstTime) {
         setIsLoadingLog(true);
+        isFirstLoad.current = false;
       }
 
       const logSourceKey = `${logSource}_path`;
@@ -162,10 +168,16 @@ export const ActivityPanel = memo(function ActivityPanel({
 
       if (downloadRes.ok) {
         const content = await downloadRes.text();
-        setLogContents((prev) => ({
-          ...prev,
-          [logSource]: content,
-        }));
+
+        setLogContents((prev) => {
+          if (prev[logSource] === content) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [logSource]: content,
+          };
+        });
 
         if (logSource === "log_summary") {
           try {

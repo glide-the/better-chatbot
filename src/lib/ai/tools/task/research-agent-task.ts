@@ -103,13 +103,16 @@ export function taskToVercelAITool(
               parameter: {
                 task_name: name,
                 reset: true,
+                user_multi_task: true,
               },
               payload: {
                 code_input: codeInput,
-                topic: `role_definition: """${role_definition}""", 
-                task_objective: """${task_objective}""",
-                ranking_rules: """${ranking_rules}""",
-                search_keywords: ${JSON.stringify(search_keywords)}`,
+                topic: JSON.stringify({
+                  角色定义: role_definition,
+                  任务: task_objective,
+                  通用规则: ranking_rules,
+                  调研关键词: search_keywords,
+                }),
               },
             }),
           },
