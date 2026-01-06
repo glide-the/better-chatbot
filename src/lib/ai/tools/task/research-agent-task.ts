@@ -123,8 +123,16 @@ export function taskToVercelAITool(
           output: firstResult,
         });
 
-        if (!taskId) return firstResult;
-
+        if (!taskId) {
+          return {
+            ...baseResult,
+            endedAt: Date.now(),
+            status: "fail",
+            info: json.msg,
+            taskId,
+            finished: false,
+          };
+        }
         let lastResult = firstResult;
 
         while (!abortSignal?.aborted && !lastResult.finished) {
