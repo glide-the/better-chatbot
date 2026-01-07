@@ -11,8 +11,6 @@ services:
       - APP_GID=1001
     entrypoint: ["/bin/sh", "/app/docker/entrypoint.sh"]
     command: ["node", "server.js"]
-    volumes:
-      - /root/RAGFlowMCP:/app/RAGFlowMCP:rw  # Read-write mount
     env_file:
       - .env
     dns:
