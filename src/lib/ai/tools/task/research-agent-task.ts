@@ -166,7 +166,6 @@ export function taskToVercelAITool(
           };
         }
         let lastResult = firstResult;
-        let isFirstIteration = true;
 
         while (!abortSignal?.aborted && !lastResult.finished) {
           await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -204,22 +203,6 @@ export function taskToVercelAITool(
           const isActuallyFinished = finished && data.info !== "pending";
           const success = isActuallyFinished && data.info === "end";
 
-          // 获取 log_run_path 日志文件内容
-          let _logRunContent: string | undefined;
-          try {
-            const logUrl = `${process.env.RESEARCH_AGENT_BASE_URL}/runner/result_source?task_id=${encodeURIComponent(
-              taskId,
-            )}&result_source_name=log_run_path`;
-
-            const logRes = await fetch(logUrl, { signal: abortSignal });
-            if (logRes.ok) {
-              _logRunContent = await logRes.text();
-            }
-          } catch (error) {
-            // 如果获取日志失败，不影响主流程，只是不包含日志内容
-            console.error("Failed to fetch log_run_path:", error);
-          }
-
           lastResult = {
             ...lastResult,
             taskId: data.task_id,
@@ -232,17 +215,13 @@ export function taskToVercelAITool(
             info: data.info,
             finished: isActuallyFinished,
             result: data.result ?? lastResult.result,
-            logRunPath: _logRunContent,
           };
 
-          if (isFirstIteration) {
-            dataStream.write({
-              type: "tool-output-available",
-              toolCallId,
-              output: lastResult,
-            });
-            isFirstIteration = false;
-          }
+          dataStream.write({
+            type: "tool-output-available",
+            toolCallId,
+            output: lastResult,
+          });
 
           if (isActuallyFinished) break;
         }
