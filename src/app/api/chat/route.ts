@@ -2,7 +2,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  isToolUIPart,
   smoothStream,
   stepCountIs,
   streamText,

@@ -232,6 +232,7 @@ export function taskToVercelAITool(
             info: data.info,
             finished: isActuallyFinished,
             result: data.result ?? lastResult.result,
+            logRunPath: _logRunContent,
           };
 
           if (isFirstIteration) {
