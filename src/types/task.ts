@@ -7,6 +7,13 @@ export type ResearchAgentTaskResultMeta = {
   result?: Record<string, string>;
 };
 
+export type TokenUsage = {
+  steps: number;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+};
+
 export type VercelAITaskToolStreamingResult = {
   toolCallId: string;
   taskName: string;
@@ -19,6 +26,7 @@ export type VercelAITaskToolStreamingResult = {
   result?: Record<string, string>;
   error?: { name: string; message: string };
   logRunPath?: string;
+  tokenUsage?: TokenUsage;
 };
 
 export const VercelAITaskToolStreamingResultTag =

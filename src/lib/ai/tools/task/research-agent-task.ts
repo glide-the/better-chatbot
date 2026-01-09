@@ -166,6 +166,7 @@ export function taskToVercelAITool(
           };
         }
         let lastResult = firstResult;
+        let isFirstIteration = true;
 
         while (!abortSignal?.aborted && !lastResult.finished) {
           await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -204,7 +205,7 @@ export function taskToVercelAITool(
           const success = isActuallyFinished && data.info === "end";
 
           // 获取 log_run_path 日志文件内容
-          let logRunContent: string | undefined;
+          let _logRunContent: string | undefined;
           try {
             const logUrl = `${process.env.RESEARCH_AGENT_BASE_URL}/runner/result_source?task_id=${encodeURIComponent(
               taskId,
@@ -212,7 +213,7 @@ export function taskToVercelAITool(
 
             const logRes = await fetch(logUrl, { signal: abortSignal });
             if (logRes.ok) {
-              logRunContent = await logRes.text();
+              _logRunContent = await logRes.text();
             }
           } catch (error) {
             // 如果获取日志失败，不影响主流程，只是不包含日志内容
@@ -231,17 +232,66 @@ export function taskToVercelAITool(
             info: data.info,
             finished: isActuallyFinished,
             result: data.result ?? lastResult.result,
-            logRunPath: logRunContent,
           };
 
-          dataStream.write({
-            type: "tool-output-available",
-            toolCallId,
-            output: lastResult,
-          });
+          if (isFirstIteration) {
+            dataStream.write({
+              type: "tool-output-available",
+              toolCallId,
+              output: lastResult,
+            });
+            isFirstIteration = false;
+          }
 
           if (isActuallyFinished) break;
         }
+
+        // 获取 log_run_path 日志文件内容
+        let logRunContent: string | undefined;
+        try {
+          const logUrl = `${process.env.RESEARCH_AGENT_BASE_URL}/runner/result_source?task_id=${encodeURIComponent(
+            taskId,
+          )}&result_source_name=log_run_path`;
+
+          const logRes = await fetch(logUrl, { signal: abortSignal });
+          if (logRes.ok) {
+            logRunContent = await logRes.text();
+          }
+        } catch (error) {
+          // 如果获取日志失败，不影响主流程，只是不包含日志内容
+          console.error("Failed to fetch log_run_path:", error);
+        }
+
+        // 获取 token_usage 数据
+        let tokenUsage:
+          | {
+              steps: number;
+              input_tokens: number;
+              output_tokens: number;
+              total_tokens: number;
+            }
+          | undefined;
+        try {
+          const resultUrl = `${process.env.RESEARCH_AGENT_BASE_URL}/runner/result_source?task_id=${encodeURIComponent(
+            taskId,
+          )}&result_source_name=result_path`;
+
+          const resultRes = await fetch(resultUrl, { signal: abortSignal });
+          if (resultRes.ok) {
+            const resultJson = await resultRes.json();
+            tokenUsage = resultJson.token_usage;
+          }
+        } catch (error) {
+          // 如果获取 token_usage 失败，不影响主流程
+          console.error("Failed to fetch token_usage:", error);
+        }
+
+        lastResult = {
+          ...lastResult,
+          endedAt: Date.now(),
+          logRunPath: logRunContent,
+          tokenUsage,
+        };
 
         return lastResult;
       } catch (error) {
