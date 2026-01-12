@@ -1,12 +1,16 @@
 services:
-  better-chatbot:
+   better-chatbot:
     build:
       context: ..
       dockerfile: ./docker/Dockerfile
     ports:
       - '3000:3000'
     environment:
-      - NO_HTTPS=1
+      - NO_HTTPS=1 
+      - APP_UID=1001
+      - APP_GID=1001
+    entrypoint: ["/bin/sh", "/app/docker/entrypoint.sh"]
+    command: ["node", "server.js"]
     env_file:
       - .env
     dns:
