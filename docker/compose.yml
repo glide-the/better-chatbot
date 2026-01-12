@@ -1,5 +1,5 @@
 services:
-   better-chatbot:
+  better-chatbot:
     build:
       context: ..
       dockerfile: ./docker/Dockerfile
