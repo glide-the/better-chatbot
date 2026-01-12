@@ -399,8 +399,6 @@ export async function POST(request: Request) {
             },
           }),
         );
-
-        return result;
       },
 
       generateId: generateUUID,
